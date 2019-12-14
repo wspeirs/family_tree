@@ -7,8 +7,5 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 simple_logger = "1.0"
-pbr = "1.0"
 csv = "1.0"
-serde = "1.0"
-serde_derive = "1.0"
 petgraph = "0.4"

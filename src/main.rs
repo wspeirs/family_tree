@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate serde_derive;
 
 use std::path::Path;
 use std::collections::{HashMap, HashSet};
@@ -12,9 +10,11 @@ use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, IntoNodeReferences};
 use petgraph::dot::{Dot, Config};
 use std::ops::{Index, IndexMut};
+use std::cmp::max;
+use std::fmt::{Display, Formatter, Error};
 
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 struct Person {
     id: usize,              // 0
     generation: isize,
@@ -28,6 +28,13 @@ struct Person {
 //    pob: String,
 //    pod: String,
 //    notes: String
+}
+
+impl Display for Person {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        writeln!(f, "{} {}", self.first_name, self.last_name);
+        write!(f, "{} - {}", self.dob, self.dod)
+    }
 }
 
 #[derive(Debug)]
@@ -176,10 +183,12 @@ fn main() {
     debug!("BASE CHILD: {:?}", family_tree[base_child]);
 
     let mut dfs = Dfs::new(&family_tree, base_child);
+    let mut max_generation = 0;
 
     // DFS from the base child to everyone, setting their generations
     while let Some(node) = dfs.next(&family_tree) {
         let cur_generation = family_tree[node].generation + 1;
+        max_generation = std::cmp::max(max_generation, cur_generation);
 
         if let Some(father) = family_tree[node].father {
             let father_node = *person_map.get(&father).unwrap();
@@ -224,5 +233,37 @@ fn main() {
         }).collect::<Vec<_>>();
     }
 
-    println!("{:?}", Dot::with_config(&family_tree, &[Config::EdgeNoLabel]));
+    // print out our family tree
+    println!("digraph {{");
+
+    // go through generation-by-generation, starting with the max
+    for cur_generation in (0..max_generation).rev() {
+        let members = family_tree.node_indices().filter(|n| {
+            family_tree[*n].generation == cur_generation
+        }).collect::<Vec<_>>();
+
+        println!("{{ rank=same; ");
+
+        for member in &members {
+            let p = &family_tree[*member];
+
+            println!("{} [shape=rect label=\"{}\"]", p.id, p);
+        }
+
+        println!("}};");
+
+        for member in &members {
+            let p = &family_tree[*member];
+
+            if let Some(m) = p.mother {
+                println!("{} -> {}", p.id, m);
+            }
+
+            if let Some(f) = p.father {
+                println!("{} -> {}", p.id, f);
+            }
+        }
+    }
+
+    println!("}}");
 }
