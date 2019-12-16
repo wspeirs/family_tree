@@ -20,7 +20,7 @@ impl FamilyTree {
 
         // add all the people as nodes, and construct the lookup mapping: id -> NodeId
         for person in people {
-            let person_id = person.id;
+            let person_id = person.record.id;
             let node_id = family_tree.add_node(person);
 
             person_map.insert(person_id, node_id);
@@ -33,17 +33,17 @@ impl FamilyTree {
             let person = &node.weight;
 
             // add in the mother to our list of edges
-            if person.mother.is_some() && person_map.contains_key(&person.mother.unwrap()) {
-                let person_index = person_map.get(&person.id).unwrap();
-                let mother_index = person_map.get(&person.mother.unwrap()).unwrap();
+            if person.record.mother.is_some() && person_map.contains_key(&person.record.mother.unwrap()) {
+                let person_index = person_map.get(&person.record.id).unwrap();
+                let mother_index = person_map.get(&person.record.mother.unwrap()).unwrap();
 
                 edges.push((*person_index, *mother_index, Parent::Mother));
             }
 
             // add in the father to our list of edges
-            if person.father.is_some() && person_map.contains_key(&person.father.unwrap()) {
-                let person_index = person_map.get(&person.id).unwrap();
-                let father_index = person_map.get(&person.father.unwrap()).unwrap();
+            if person.record.father.is_some() && person_map.contains_key(&person.record.father.unwrap()) {
+                let person_index = person_map.get(&person.record.id).unwrap();
+                let father_index = person_map.get(&person.record.father.unwrap()).unwrap();
 
                 edges.push((*person_index, *father_index, Parent::Father));
             }
@@ -70,6 +70,7 @@ impl FamilyTree {
     }
 
     fn id2index(&self, id: usize) -> NodeIndex {
+        debug!("ID -> INDEX: {}", id);
         *self.person_map.get(&id).unwrap()
     }
 
@@ -82,11 +83,11 @@ impl FamilyTree {
     }
 
     fn father_index(&self, index: NodeIndex) -> Option<NodeIndex> {
-        self.index2person(index).father.and_then(|id| Some(self.id2index(id)))
+        self.index2person(index).record.father.and_then(|id| Some(self.id2index(id)))
     }
 
     fn mother_index(&self, index: NodeIndex) -> Option<NodeIndex> {
-        self.index2person(index).mother.and_then(|id| Some(self.id2index(id)))
+        self.index2person(index).record.mother.and_then(|id| Some(self.id2index(id)))
     }
 
     ///
@@ -185,13 +186,13 @@ impl FamilyTree {
             debug!("UNASSIGNED: {:?}", unassigned);
 
             for person in &unassigned {
-                if let Some(m) = self.index2person(*person).mother {
+                if let Some(m) = self.index2person(*person).record.mother {
                     let mother_generation = self.id2person(m).generation;
 
                     if mother_generation != -1 {
                         self.family_tree[*person].generation = mother_generation - 1;
                     }
-                } else if let Some(f) = self.index2person(*person).father {
+                } else if let Some(f) = self.index2person(*person).record.father {
                     let father_generation = self.id2person(f).generation;
 
                     if father_generation != -1 {
@@ -219,7 +220,7 @@ impl FamilyTree {
         println!("digraph {{");
 
         // go through generation-by-generation, starting with the max
-        for cur_generation in (0..max_generation).rev() {
+        for cur_generation in (0..=max_generation).rev() {
             let members = self.family_tree.node_indices().filter(|n| {
                 self.index2person(*n).generation == cur_generation
             }).collect::<Vec<_>>();
@@ -229,7 +230,7 @@ impl FamilyTree {
             for member in &members {
                 let p = self.index2person(*member);
 
-                println!("{} [shape=rect label=\"{}\"]", p.id, p);
+                println!("{} [shape=rect label=\"{}\"]", p.record.id, p);
             }
 
             println!("}};");
@@ -237,12 +238,12 @@ impl FamilyTree {
             for member in &members {
                 let p = self.index2person(*member);
 
-                if let Some(m) = p.mother {
-                    println!("{} -> {}", p.id, m);
+                if let Some(m) = p.record.mother {
+                    println!("{} -> {}", p.record.id, m);
                 }
 
-                if let Some(f) = p.father {
-                    println!("{} -> {}", p.id, f);
+                if let Some(f) = p.record.father {
+                    println!("{} -> {}", p.record.id, f);
                 }
             }
         }

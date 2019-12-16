@@ -6,6 +6,10 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-simple_logger = "1.0"
+#simple_logger = "1.0"
+simple-logging = "2.0"
+clap = "2.33"
 csv = "1.0"
+serde = "1.0"
+serde_derive = "1.0"
 petgraph = "0.4"
